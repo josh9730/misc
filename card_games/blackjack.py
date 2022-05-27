@@ -81,7 +81,16 @@ class Blackjack:
             f"\n\tPoints: {points}",
         )
 
+    def _laugh_at_player(self):
+        last_card = self._show_last_card()
+        print(f"\tThe next card was the {str(last_card[0])}\n")
+        self.player_hand.extend(last_card)
+        points = self._calc_points(self.player_hand)
+        if 21 >= points > self.dealer_points:
+            print("\tHaha, you would have won, sucker!")
+
     def calc_bet(self, win=False):
+        """Calculate winnings/losings."""
         if win:
             self.money += self.bet
         else:
@@ -90,7 +99,7 @@ class Blackjack:
 
     def show_me_the_money(self):
         """Function to print current money pot."""
-        print(f"You have: ${self.money}")
+        print(f"\nYou have: ${self.money}")
         print(f"You have lost: ${self.money_lost}\n")
 
     def deal(self):
@@ -124,20 +133,20 @@ class Blackjack:
         """Show the cards & points for both the dealer and player."""
         self._print_cards_per("dealer", self.dealer_hand)
         self._print_cards_per("player", self.player_hand)
-        print("=" * 50)
+        print("")
 
     def show_winner(self):
         """Determine winner, print GAME OVER string."""
-        msg = "\n** Game Over -- {} **\n"
+        msg = "\n***** Game Over -- {} *****\n"
         if self.player_points == self.dealer_points:
             print(msg.format("DRAW"))
-            print("At least you didn' lose any money.")
-            print(f"\tThe next card was the {str(self._show_last_card()[0])}\n")
+            print("At least you didn't lose any money.")
+            self._laugh_at_player()
         elif self.player_points > 21 or 21 > self.dealer_points > self.player_points:
             self.calc_bet()
             print(msg.format("YOU LOSE"))
             print(f"You lost ${self.bet}")
-            print(f"\tThe next card was the {str(self._show_last_card()[0])}\n")
+            self._laugh_at_player()
         else:
             self.calc_bet(win=True)
             print(msg.format("YOU WIN"))
@@ -185,7 +194,7 @@ if __name__ == "__main__":
 
         bet = 0
         # while isinstance(bet, int) and 0 < bet < game.money:
-        while bet == False:
+        while not bet:
             bet_str = input("Place your bet: ")
             try:
                 bet = int(bet_str)
@@ -224,6 +233,7 @@ if __name__ == "__main__":
         game.show_winner()
 
         # play new game & reset
+        print("=" * 50)
         new_game = ""
         while new_game not in ("yes", "no"):
             new_game = input("New Game? ").lower()
