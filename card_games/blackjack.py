@@ -244,4 +244,10 @@ if __name__ == "__main__":
         else:
             game.game_over = False
 
-    print("Good Game!")
+    winnings = game.money - game.money_lost
+    if winnings > 0:
+        print(f"Good Game! You won a total of ${winnings}.")
+    elif winnings < 0:
+        print(f"You're not very good. You lost a total of ${winnings}.")
+    else:
+        print("Yay... You broke even...")
