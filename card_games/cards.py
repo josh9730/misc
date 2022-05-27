@@ -3,7 +3,7 @@ from collections import namedtuple
 from typing import Union
 
 
-class Card(namedtuple("Deck", ["value", "suit"])):
+class Card(namedtuple("Card", ["value", "suit"])):
     def __str__(self):
         """Overload string return, ex: '2 of Hearts'"""
         return f"{self.value} of {self.suit}"
@@ -12,15 +12,13 @@ class Card(namedtuple("Deck", ["value", "suit"])):
 class Deck:
     def __init__(self):
         """Create Deck from Card class as a list of namedtuples and shuffle the deck."""
-        self.suits = ["Hearts", "Spades", "Diamonds", "Clubs"]
-        self.faces = ["Ace", "King", "Queen", "Jack"]
-        self.values = [str(i) for i in range(2, 11)] + self.faces
-
         self.deck = self._create_deck()
         self.shuffle(self.deck)
 
     def _create_deck(self) -> list:
         """Create new deck."""
+        self.suits = ["Hearts", "Spades", "Diamonds", "Clubs"]
+        self.values = [str(i) for i in range(2, 11)] + ["Ace", "King", "Queen", "Jack"]
         return [Card(val, suit) for suit in self.suits for val in self.values]
 
     def cards_in_deck(self) -> int:

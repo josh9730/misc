@@ -169,10 +169,12 @@ class Blackjack:
 
 
 def create_hand(hand: list) -> list:
+    """Initialize card namedtuple."""
     return [cards.Card(i, "Hearts") for i in hand]
 
 
 def test_hands():
+    """Test various hand conditions."""
     hands = [
         (12, ["Ace", "Ace", "10"]),
         (13, ["Ace", "Ace", "Ace", "10"]),
@@ -189,12 +191,39 @@ def test_hands():
         assert points == hand_points[0]
 
 
+def test_21():
+    """Test if player score == 21 ends the game."""
+    game = Blackjack()
+    game.deal()
+    game.player_points = 21
+    game._test_game_over()
+    assert game.game_over
+
+
+def test_lose_bet():
+    """Test bet if lose."""
+    game = Blackjack()
+    game.bet = 10
+    game.calc_bet(win=False)
+    assert game.money == 90
+    assert game.money_lost == 10
+
+
+def test_win_bet():
+    """Test bet if win."""
+    game = Blackjack()
+    game.bet = 10
+    game.calc_bet(win=True)
+    assert game.money == 110
+    assert game.money_lost == 0
+
+
 #
 # End Pytests
 #
 
 
-if __name__ == "__main__":
+def main():
     game = Blackjack()
 
     play = True
@@ -246,7 +275,6 @@ if __name__ == "__main__":
 
         # play new game & reset
         print("=" * 50)
-
         new_game = ""
         while new_game not in ("yes", "no"):
             new_game = input("New Game? ").lower()
@@ -264,3 +292,7 @@ if __name__ == "__main__":
         print(f"You're not very good. You lost a total of ${winnings}.")
     else:
         print("Yay... You broke even...")
+
+
+if __name__ == "__main__":
+    main()
