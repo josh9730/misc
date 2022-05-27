@@ -6,22 +6,27 @@ class Blackjack:
 
     def __init__(self):
         self.deck = cards.Deck()
+        self.money = 100
+        self.money_lost = 0
+        self.bet = 0
 
     def _calc_points(self, hand: list) -> int:
         """Calculate points for the hand supplied."""
-        ace = False
+        num_aces = 0
         points = 0
         for card in hand:
             if card.value in ("Jack", "Queen", "King"):
                 points += 10
             elif card.value == "Ace":
-                ace = True
+                num_aces += 1
                 points += 11
             else:
                 points += int(card.value)
 
-        if ace and points > 21:
+        while points > 21 and num_aces:
             points -= 10
+            num_aces -= 1
+
         return points
 
     def _test_game_over(self):
@@ -47,6 +52,10 @@ class Blackjack:
         hand.extend(new_card)
         return self._calc_points(hand)
 
+    def _show_last_card(self):
+        """Draw last card on lose or draw."""
+        return self.deck.deal_cards(1)
+
     def _print_cards_per(self, player: str, hand: list):
         """Print cards and points per-player.
 
@@ -71,6 +80,18 @@ class Blackjack:
             f"{player.capitalize()} Hand:\n\t{cards_str}",
             f"\n\tPoints: {points}",
         )
+
+    def calc_bet(self, win=False):
+        if win:
+            self.money += self.bet
+        else:
+            self.money -= self.bet
+            self.money_lost += self.bet
+
+    def show_me_the_money(self):
+        """Function to print current money pot."""
+        print(f"You have: ${self.money}")
+        print(f"You have lost: ${self.money_lost}\n")
 
     def deal(self):
         """Deal new hand to players.
@@ -110,10 +131,48 @@ class Blackjack:
         msg = "\n** Game Over -- {} **\n"
         if self.player_points == self.dealer_points:
             print(msg.format("DRAW"))
+            print("At least you didn' lose any money.")
+            print(f"\tThe next card was the {str(self._show_last_card()[0])}\n")
         elif self.player_points > 21 or 21 > self.dealer_points > self.player_points:
+            self.calc_bet()
             print(msg.format("YOU LOSE"))
+            print(f"You lost ${self.bet}")
+            print(f"\tThe next card was the {str(self._show_last_card()[0])}\n")
         else:
+            self.calc_bet(win=True)
             print(msg.format("YOU WIN"))
+            print(f"You won ${self.bet}!")
+
+
+#
+# Pytests
+#
+
+
+def create_hand(hand: list) -> list:
+    return [cards.Card(i, "Hearts") for i in hand]
+
+
+def test_hands():
+    hands = [
+        (12, ["Ace", "Ace", "10"]),
+        (13, ["Ace", "Ace", "Ace", "10"]),
+        (14, ["Ace", "Ace", "Ace", "Ace", "10"]),
+        (17, ["Ace", "Ace", "King", "5"]),
+        (18, ["Ace", "Ace", "Ace", "King", "5"]),
+        (26, ["Ace", "King", "Queen", "5"]),
+    ]
+
+    game = Blackjack()
+    for hand_points in hands:
+        hand = create_hand(hand_points[1])
+        points = game._calc_points(hand)
+        assert points == hand_points[0]
+
+
+#
+# End Pytests
+#
 
 
 if __name__ == "__main__":
@@ -122,6 +181,29 @@ if __name__ == "__main__":
     play = True
     while play:
         game.deal()
+        game.show_me_the_money()
+
+        bet = 0
+        # while isinstance(bet, int) and 0 < bet < game.money:
+        while bet == False:
+            bet_str = input("Place your bet: ")
+            try:
+                bet = int(bet_str)
+            except ValueError:
+                print("Must be valid bet.")
+                bet = False
+            else:
+                if bet > game.money:
+                    print("You are too poor for that bet.")
+                    bet = False
+                elif bet <= 0:
+                    print("Stop betting nonsense.")
+                    bet = False
+                elif bet == game.money:
+                    print("You got balls, son.")
+
+        print(f"You bet ${bet}\n")
+        game.bet = bet
         game.show_cards()
 
         while not game.game_over:
