@@ -1,5 +1,6 @@
 import random
 from collections import namedtuple
+from typing import Union
 
 
 class Card(namedtuple("Deck", ["value", "suit"])):
@@ -18,11 +19,11 @@ class Deck:
         self.deck = self._create_deck()
         self.shuffle(self.deck)
 
-    def _create_deck(self):
+    def _create_deck(self) -> list:
         """Create new deck."""
         return [Card(val, suit) for suit in self.suits for val in self.values]
 
-    def cards_in_deck(self):
+    def cards_in_deck(self) -> int:
         """Return length of current deck."""
         return len(self.deck)
 
@@ -31,24 +32,32 @@ class Deck:
         for card in self.deck:
             print(card)
 
-    def shuffle(self, deck):
-        """Shuffle deck."""
+    def shuffle(self, deck: list):
+        """Shuffle deck.
+
+        Args:
+            deck [list]: list of Card objects
+        """
         random.shuffle(deck)
 
-    def draw_one(self):
+    def draw_one(self) -> Card:
         """Draw one random card and put back into the deck."""
         return random.choice(self.deck)
 
-    def deal_cards(self, number, return_list=False):
-        """Deal defined number of cards from the deck, removing the cards."""
+    def deal_cards(self, number, return_list=False) -> Union[list, Card]:
+        """Deal defined number of cards from the deck, removing the cards.
+
+        Args:
+            number [int]: number of cards to deal
+            return_list [bool]: return output as list if True
+        """
         if number > 52 or number > len(self.deck):
             self.add_new_deck()
+        dealt_cards = [self.deck.pop(0) for _ in range(number)]
+        if return_list:
+            return [str(i) for i in dealt_cards]
         else:
-            dealt_cards = [self.deck.pop(0) for _ in range(number)]
-            if return_list:
-                return [str(i) for i in dealt_cards]
-            else:
-                return dealt_cards
+            return dealt_cards
 
     def add_new_deck(self):
         """Create and shuffle a new deck, and add to existing deck."""

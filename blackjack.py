@@ -7,13 +7,6 @@ class Blackjack:
     def __init__(self):
         self.deck = Deck()
 
-    def _check_enough_cards(self, num_cards: int):
-        """Check if the number of cards left in deck >= 'num_cards' and
-        adds additional deck if needed.
-        """
-        if self.deck.cards_in_deck() < num_cards:
-            self.deck.add_new_deck()
-
     def _calc_points(self, hand: list) -> int:
         """Calculate points for the hand supplied."""
         ace = False
@@ -40,13 +33,16 @@ class Blackjack:
         """
         if self.dealer_points < self.player_points == 21:
             self.dealer_hit()
-            self.show_cards()
         elif self.player_points > 21:
             self.game_over = True
 
     def _hit(self, hand: list) -> int:
-        """Hit and return calculated points."""
-        self._check_enough_cards(1)
+        """Hit and return calculated points.
+
+        Args:
+            hand [list]: list of Card objects. Expect either self.player_hand or
+            self.dealer_hand
+        """
         new_card = self.deck.deal_cards(1)
         hand.extend(new_card)
         return self._calc_points(hand)
@@ -58,6 +54,11 @@ class Blackjack:
         total displayed.
         - if dealer and not game_over, then only the dealer's first card will be shown.
         The point total for the dealer will be only an empty string.
+
+        Args:
+            player [str]: 'dealer' or 'player'. Used to determine which hand to display.
+            hand [list]: list of Card objects. Expect either self.player_hand or
+            self.dealer_hand
         """
         points = ""
         if player == "player" or self.game_over:
@@ -74,13 +75,10 @@ class Blackjack:
     def deal(self):
         """Deal new hand to players.
 
-        - Check cards in deck
         - deal 2 to player and dealer
         - Calculate points for each player
         - Test if player has 21, no need to prompt for stay/hit
         """
-        self._check_enough_cards(4)
-
         self.dealer_hand = self.deck.deal_cards(2)
         self.player_hand = self.deck.deal_cards(2)
 
@@ -124,9 +122,10 @@ if __name__ == "__main__":
     play = True
     while play:
         game.deal()
+        game.show_cards()
 
         while not game.game_over:
-            game.show_cards()
+
             response = ""
             while response not in ("hit", "stay"):
                 response = input("Hit or stay? ").lower()
