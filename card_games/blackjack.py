@@ -38,6 +38,7 @@ class Blackjack:
         """
         if self.dealer_points < self.player_points == 21:
             self.dealer_hit()
+
         elif self.player_points > 21:
             self.game_over = True
 
@@ -73,6 +74,7 @@ class Blackjack:
         if player == "player" or self.game_over:
             cards_str = ", ".join(str(i) for i in hand)
             points = self.player_points if player == "player" else self.dealer_points
+
         else:
             cards_str = f"{hand[0]}, UNKNOWN"
 
@@ -82,10 +84,13 @@ class Blackjack:
         )
 
     def _laugh_at_player(self):
+        """Show last card to the player to see if they would have won."""
         last_card = self._show_last_card()
         print(f"\tThe next card was the {str(last_card[0])}\n")
+
         self.player_hand.extend(last_card)
         points = self._calc_points(self.player_hand)
+
         if 21 >= points > self.dealer_points:
             print("\tHaha, you would have won, sucker!")
 
@@ -93,6 +98,7 @@ class Blackjack:
         """Calculate winnings/losings."""
         if win:
             self.money += self.bet
+
         else:
             self.money -= self.bet
             self.money_lost += self.bet
@@ -127,6 +133,7 @@ class Blackjack:
         than the player_points, then changing game_over to True."""
         while self.player_points > self.dealer_points:
             self.dealer_points = self._hit(self.dealer_hand)
+
         self.game_over = True
 
     def show_cards(self):
@@ -138,15 +145,18 @@ class Blackjack:
     def show_winner(self):
         """Determine winner, print GAME OVER string."""
         msg = "\n***** Game Over -- {} *****\n"
+
         if self.player_points == self.dealer_points:
             print(msg.format("DRAW"))
             print("At least you didn't lose any money.")
             self._laugh_at_player()
+
         elif self.player_points > 21 or 21 > self.dealer_points > self.player_points:
             self.calc_bet()
             print(msg.format("YOU LOSE"))
             print(f"You lost ${self.bet}")
             self._laugh_at_player()
+
         else:
             self.calc_bet(win=True)
             print(msg.format("YOU WIN"))
@@ -193,14 +203,16 @@ if __name__ == "__main__":
         game.show_me_the_money()
 
         bet = 0
-        # while isinstance(bet, int) and 0 < bet < game.money:
         while not bet:
+
             bet_str = input("Place your bet: ")
             try:
                 bet = int(bet_str)
+
             except ValueError:
                 print("Must be valid bet.")
                 bet = False
+
             else:
                 if bet > game.money:
                     print("You are too poor for that bet.")
@@ -234,6 +246,7 @@ if __name__ == "__main__":
 
         # play new game & reset
         print("=" * 50)
+
         new_game = ""
         while new_game not in ("yes", "no"):
             new_game = input("New Game? ").lower()
