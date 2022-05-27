@@ -275,6 +275,9 @@ def main():
 
         # play new game & reset
         print("=" * 50)
+        if game.money == 0:
+            print("You're broke, get out of the casino!")
+            exit()
         new_game = ""
         while new_game not in ("yes", "no"):
             new_game = input("New Game? ").lower()
