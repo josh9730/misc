@@ -250,7 +250,7 @@ def main():
                     print("Stop betting nonsense.")
                     bet = False
                 elif bet == game.money:
-                    print("You got balls, son.")
+                    print("Feeling cocky!")
 
         print(f"You bet ${bet}\n")
         game.bet = bet
