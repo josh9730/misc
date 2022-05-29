@@ -30,7 +30,7 @@ def get_list_of_rows(smartsheet_client):
     Col 1 is the PIDs, Col 2 is the Image, and Col 3 is the Description.
     """
     sheet_id = "5040109000124292"
-    return smartsheet_client.Sheets.get_sheet(sheet_id).rows
+    return smartsheet_client.Sheets.get_sheet(sheet_id).rows[210:]
 
 
 def get_links(driver, url: str, words: list, attribute: str):
@@ -44,6 +44,10 @@ def get_links(driver, url: str, words: list, attribute: str):
         attribute [str]: HTML tag to filter on. Expect href or data-href
     """
     driver.get(url)
+    while driver.title == "ERROR: The request could not be satisfied":
+        print(driver.title)
+        time.sleep(300)  # handle blocked requests
+        driver.get(url)
     links = driver.find_elements(by=By.TAG_NAME, value="a")
 
     with open("output.html", "w") as f:
@@ -156,7 +160,7 @@ def main():
         else:
             print(f"No image found for {pid}.")
 
-        time.sleep(5)
+        time.sleep(3)
     driver.quit()
 
 
