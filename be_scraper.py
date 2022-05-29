@@ -46,6 +46,9 @@ def get_links(driver, url: str, words: list, attribute: str):
     driver.get(url)
     links = driver.find_elements(by=By.TAG_NAME, value="a")
 
+    with open("output.html", "w") as f:
+        f.write(driver.page_source)
+
     for link in links:
         try:
             link_url = link.get_attribute(attribute)
@@ -59,7 +62,7 @@ def get_links(driver, url: str, words: list, attribute: str):
                 return link_url
         except TypeError:
             pass
-    return driver.page_source
+    return None
 
 
 def get_image_url(driver, row) -> str:
@@ -83,15 +86,9 @@ def get_image_url(driver, row) -> str:
 
     if ring_link:
         image_link = get_links(driver, ring_link, ["top", "image", pid], "data-href")
+        return image_link
 
-        if not isinstance(image_link, str):
-            with open('output.html', 'w') as f:
-                f.write(image_link)
-
-            driver.quit()
-            exit(1)
-
-    return image_link
+    return None
 
 
 def download_image(image_url: str):
