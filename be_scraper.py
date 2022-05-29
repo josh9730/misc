@@ -59,7 +59,7 @@ def get_links(driver, url: str, words: list, attribute: str):
                 return link_url
         except TypeError:
             pass
-    return None
+    return driver.page_source
 
 
 def get_image_url(driver, row) -> str:
@@ -81,9 +81,16 @@ def get_image_url(driver, row) -> str:
 
     ring_link = get_links(driver, query_url + pid, words.split(), "href")
 
-    image_link = None
     if ring_link:
         image_link = get_links(driver, ring_link, ["top", "image", pid], "data-href")
+
+        if not isinstance(image_link, str):
+            with open('output.html', 'w') as f:
+                f.write(image_link)
+
+            driver.quit()
+            exit(1)
+
     return image_link
 
 
@@ -141,6 +148,7 @@ def main():
     for row in rows:
         pid = row.get_column(6452170849576836).value
         image_url = get_image_url(driver, row)
+
         if image_url:
             filename = download_image(image_url)
             upload_image(smartsheet_client, row.id, filename)
