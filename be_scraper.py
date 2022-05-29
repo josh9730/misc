@@ -80,7 +80,7 @@ def get_image_url(driver, row) -> str:
 
     pid = row.get_column(6452170849576836).value
     description = row.get_column(8703970663262084).value
-    words = description.split("(")[0] + f" {pid}"
+    words = description.split("(")[0] + f" {pid}"  # remove inconsistent size notes
 
     ring_link = get_links(driver, query_url + pid, words.split(), "href")
 
@@ -141,7 +141,9 @@ def main():
     driver = open_driver()
     smartsheet_client = open_smartsheet()
 
-    rows = get_list_of_rows(smartsheet_client)
+    # Get list of rows and filter out rows with an image already uploaded
+    rows_all = get_list_of_rows(smartsheet_client)
+    rows = [row for row in rows_all if not row.get_column(4200371035891588).value]
     for row in rows:
         pid = row.get_column(6452170849576836).value
         image_url = get_image_url(driver, row)
