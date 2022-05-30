@@ -1,5 +1,6 @@
 import shutil
 import time
+from typing import Union
 
 import keyring
 import requests
@@ -30,10 +31,10 @@ def get_list_of_rows(smartsheet_client):
     Col 1 is the PIDs, Col 2 is the Image, and Col 3 is the Description.
     """
     sheet_id = "5040109000124292"
-    return smartsheet_client.Sheets.get_sheet(sheet_id).rows[210:]
+    return smartsheet_client.Sheets.get_sheet(sheet_id)
 
 
-def get_links(driver, url: str, words: list, attribute: str):
+def get_links(driver, url: str, words: list, attribute: str) -> Union[str, None]:
     """Runs Selenium and returns a URL string.
 
     Args:
@@ -42,6 +43,9 @@ def get_links(driver, url: str, words: list, attribute: str):
         be improved.
 
         attribute [str]: HTML tag to filter on. Expect href or data-href
+
+    Returns:
+        URL or None
     """
     driver.get(url)
     while driver.title == "ERROR: The request could not be satisfied":
@@ -56,20 +60,21 @@ def get_links(driver, url: str, words: list, attribute: str):
     for link in links:
         try:
             link_url = link.get_attribute(attribute)
-        except selenium.common.exceptions.StaleElementReferenceException:
+        except selenium.common.exceptions.StaleElementReferenceException:  # handles no matches
             pass
 
         try:
             if all(i in link_url for i in words):
-                if link_url.startswith("//"):  # handle '//image..'
+                if link_url.startswith("//"):  # handle '//image..' URLs
                     link_url = "https:" + link_url
                 return link_url
         except TypeError:
             pass
+
     return None
 
 
-def get_image_url(driver, row) -> str:
+def get_image_url(driver, row) -> Union[str, None]:
     """Use Selenium to query for the ring.
 
     Uses the get_links() function to actually query. First time is for the search,
@@ -78,7 +83,14 @@ def get_image_url(driver, row) -> str:
 
     Second time is using the URL retrieved early to navigate to the product page and find the image.
 
-    Returns image or None.
+    Args:
+        row: Row element from Smartsheets. Used to obtain the PID and the Description
+            - PID: Not enough to return a single ring on it's own. Unique rings often have PID + 'PT', etc
+            - Description: String of words that will typically show up in the ring's URL
+                - Ex: 'Rae Diamond Ring' -- split into a list for an 'all' match
+
+    Returns:
+        image URL or None.
     """
     query_url = "https://www.brilliantearth.com/search/?q="
 
@@ -89,14 +101,22 @@ def get_image_url(driver, row) -> str:
     ring_link = get_links(driver, query_url + pid, words.split(), "href")
 
     if ring_link:
+
+        # the words for the image are 'top' and 'image' to select only the top-view image
         image_link = get_links(driver, ring_link, ["top", "image", pid], "data-href")
         return image_link
 
     return None
 
 
-def download_image(image_url: str):
-    """Cannot upload the image directly to Smartsheets, so this downloads the image first."""
+def download_image(image_url: str) -> str:
+    """Cannot upload the image directly to Smartsheets, so this downloads the image first.
+
+    Args:
+        image_url [str]: URL from which to download the image directly
+
+    Returns absolute filepath to the saved location
+    """
     filename = "/Users/jdickman/Desktop/be_pics/" + image_url.split("/")[-1]
     r = requests.get(image_url, stream=True)
 
@@ -107,12 +127,18 @@ def download_image(image_url: str):
         # Open a local file with wb ( write binary ) permission.
         with open(filename, "wb") as f:
             shutil.copyfileobj(r.raw, f)
+
     return filename
 
 
-def upload_image(smartsheet_client, row_id: int, filename: str):
+def upload_image(smartsheet_client, row_id: int, filename: str) -> None:
     """Upload image from the same directort that was used to store the image,
     and push to Smartsheets.
+
+    Args:
+        - smartsheet_client object
+        - row_id [int]: unique ID for the row
+        - filename [str]: absolute filepath
     """
     smartsheet_client.Cells.add_image_to_cell(
         5040109000124292,  # sheet id
@@ -124,7 +150,7 @@ def upload_image(smartsheet_client, row_id: int, filename: str):
     )
 
 
-def main():
+def main() -> None:
     """Program to upload images of Brilliant Earth Rings given a list of PIDs/Descriptions.
     PIDs and Description fields are in Smartsheets, and the images are uploaded to the same
     sheet.
@@ -148,6 +174,7 @@ def main():
     # Get list of rows and filter out rows with an image already uploaded
     rows_all = get_list_of_rows(smartsheet_client)
     rows = [row for row in rows_all if not row.get_column(4200371035891588).value]
+
     for row in rows:
         pid = row.get_column(6452170849576836).value
         image_url = get_image_url(driver, row)
@@ -161,6 +188,7 @@ def main():
             print(f"No image found for {pid}.")
 
         time.sleep(3)
+
     driver.quit()
 
 
