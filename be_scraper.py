@@ -1,3 +1,5 @@
+# Note: Does not work with python3.10
+
 import shutil
 import time
 from typing import Union
