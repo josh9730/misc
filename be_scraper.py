@@ -1,4 +1,4 @@
-# Note: Does not work with python3.10
+# Note: Smartsheet library does not work with python3.10
 
 import shutil
 import time
