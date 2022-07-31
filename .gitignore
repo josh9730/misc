@@ -132,4 +132,5 @@ dmypy.json
 # HTML
 *.html
 
-.gitignore
+*gitignore
+*.csv
