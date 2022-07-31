@@ -1,4 +1,3 @@
-# Note: Smartsheet library does not work with python3.10
 from datetime import datetime
 
 import keyring
