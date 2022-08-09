@@ -1,11 +1,10 @@
-from datetime import datetime
-
 import keyring
 import pandas as pd
 import smartsheet
 
-NS_CSV_DUMP = "NewPDPhotographyNeededROCResults930.csv"
-PD_LAUNCHES_SHEET_NAME = "New PD Launches"
+NS_CSV_DUMP = "NewPDPhotographyNeeded8-7.csv"
+PD_LAUNCHES_SHEET_NAME = "New PD Launches (NOT LIVE)"
+HOLDS_SHEET = "ROs and Holds (NOT LIVE)"
 SS_COLUMNS = [
     "Item",  # renamed from 'Name' in csv
     "Description",
@@ -15,53 +14,78 @@ SS_COLUMNS = [
     "Earliest PO/WO Date",
     "Photo Notes",
     "Photograph",
-    "Copy Complete?",  # renamed from 'Notes for Copy' in csv
-    "Date Photo Completed",
+    "Date Photo Completed?",
     "Design Approval Date",
     "Design Approval Status",
+    "How Produced",
 ]
+SS_COLUMNS.sort()
 
 
-def get_sheet_id(ss_client: smartsheet) -> int:
+def check_csv_columns(df: pd.DataFrame) -> None:
+    """Check that SS_COLUMNS exist in DF as imported from csv."""
+    df_col_list = list(df.columns)
+    for col in SS_COLUMNS:
+        if col not in df_col_list:
+            raise ValueError(f"{col} not present in CSV import.")
+
+
+def get_sheet_id(ss_client: smartsheet, sheet_name: str) -> int:
     """Return Sheet ID from Sheet Name."""
     sheet_dict = ss_client.Sheets.list_sheets(include_all=True).to_dict()
     for sheet in sheet_dict["data"]:
-        if sheet["name"] == PD_LAUNCHES_SHEET_NAME:
+        if sheet["name"].upper() == sheet_name.upper():
             return sheet["id"]
+    raise NameError("Cannot find the specified Smartsheet")
 
 
 def import_csv_df() -> pd.DataFrame:
-    """Import and drop unneeded columns."""
+    """Import and drop unneeded columns.
 
-    def convert_date(date):
-        """Smartsheets requires isoformatted dates. Non-dates are converted to blank strings."""
+    For Anticipated Launch Date, if any cells are not datetime, then the rows are moved to a different sheet.
+    """
+
+    def convert_date(date: str) -> str:
+        """Specifically for Anticipated..., used to convert to isoformat.
+
+        Returns isoformatted string, unmodified date arg, or '202' (used to
+        help with filtering out non-datetime values and will be returned to blank)
+        """
         if date:
-            if "/" in date:  # coerce to isoformat
+            if "/" in date:
+                # coerce to isoformat
                 month, day, year = date.split("/")
                 return f'{year}-{month.rjust(2, "0")}-{day.rjust(2, "0")}'
             else:
-                try:
-                    datetime.fromisoformat(date)
-                except ValueError:  # handle non-date fields
-                    print(
-                        f"Value: {date} is an invalid date, converted to empty string."
-                    )
-                    return ""
+                return date
+        return "20"  # used to return back to blank after hold_df removed, as in first 2 characters of datetime
 
     df = pd.read_csv(NS_CSV_DUMP).fillna("")
     df.rename(
-        columns={"Name": "Item", "Notes for Copy": "Copy Complete?"}, inplace=True
+        columns={"Name": "Item", "Date Photo Completed": "Date Photo Completed?"},
+        inplace=True,
     )
+    check_csv_columns(df)
 
     for date_field in (
-        "Anticipated Launch Date",
         "Earliest PO/WO Date",
         "Design Approval Date",
-        "Date Photo Completed",
+        "Date Photo Completed?",
     ):
-        df[date_field] = df[date_field].apply(lambda x: convert_date(x))
+        df[date_field] = pd.to_datetime(
+            df[date_field], errors="coerce", infer_datetime_format=True
+        )
+        df[date_field] = df[date_field].astype(str).replace({"NaT": ""})
 
-    return df[[*SS_COLUMNS]]
+    # convert and add to new column
+    df["Anticipated Launch Date"] = df["Anticipated Launch Date"].apply(
+        lambda x: convert_date(x)
+    )
+    hold_df = df[~df["Anticipated Launch Date"].str.startswith("20")]
+    df = df[df["Anticipated Launch Date"].str.startswith("20")]
+    df["Anticipated Launch Date"].replace("20", "", inplace=True)
+
+    return df[SS_COLUMNS], hold_df[SS_COLUMNS]
 
 
 def open_smartsheets() -> smartsheet:
@@ -83,7 +107,10 @@ def get_active_items(sheet: smartsheet.models.Sheet) -> list:
 
 
 def upload_new_df(
-    ss_client: smartsheet, sheet: smartsheet.models.Sheet, new_df: pd.DataFrame
+    ss_client: smartsheet,
+    sheet: smartsheet.models.Sheet,
+    new_df: pd.DataFrame,
+    ignore_col_err: bool = False,
 ) -> None:
     """Iterates over csv dataframe and uploads to Smartsheets.
 
@@ -95,12 +122,19 @@ def upload_new_df(
         new_row = ss_client.models.Row()
         for col_name in SS_COLUMNS:
             if row[col_name]:  # can't append cells with empty values
-                new_row.cells.append(
-                    {
-                        "column_id": sheet.get_column_by_title(col_name).id,
-                        "value": row[col_name],
-                    }
-                )
+                sheet_col = sheet.get_column_by_title(col_name)
+                if sheet_col:
+                    new_row.cells.append(
+                        {
+                            "column_id": sheet_col.id,
+                            "value": row[col_name],
+                        }
+                    )
+                else:
+                    if ignore_col_err:
+                        pass
+                    else:
+                        raise IndexError(f"{col_name} does not exist on sheet.")
         new_row.toBottom = True
         sheet.add_rows(new_row)
 
@@ -116,14 +150,21 @@ def main():
     - Upload remaining 'new' items from DataFrame to Smartsheets
     """
     ss_client = open_smartsheets()
-    sheet_id = get_sheet_id(ss_client)
+    sheet_id = get_sheet_id(ss_client, PD_LAUNCHES_SHEET_NAME)
+    hold_sheet_id = get_sheet_id(ss_client, HOLDS_SHEET)
     pd_sheet = ss_client.Sheets.get_sheet(sheet_id)
+    hold_sheet = ss_client.Sheets.get_sheet(hold_sheet_id)
     active_items = get_active_items(pd_sheet)
+    hold_active_items = get_active_items(hold_sheet)
 
-    csv_df = import_csv_df()
+    csv_df, hold_df = import_csv_df()
 
+    # remove rows already present on SS
     new_df = csv_df[~csv_df["Item"].isin(active_items)].reset_index()
+    new_hold_df = hold_df[~hold_df["Item"].isin(hold_active_items)].reset_index()
+
     upload_new_df(ss_client, pd_sheet, new_df)
+    upload_new_df(ss_client, hold_sheet, new_hold_df, ignore_col_err=True)
 
 
 if __name__ == "__main__":
