@@ -39,17 +39,20 @@ def get_sheet_id(ss_client: smartsheet, sheet_name: str) -> int:
     raise NameError("Cannot find the specified Smartsheet")
 
 
-def import_csv_df() -> pd.DataFrame:
-    """Import and drop unneeded columns.
+def import_csv_df() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Import and drop unneeded columns from CSV, creates appropriately formatted DFs.
 
-    For Anticipated Launch Date, if any cells are not datetime, then the rows are moved to a different sheet.
+    For Anticipated Launch Date, if any cells are not datetime, then the rows are moved to a Hold sheet.
     """
 
     def convert_date(date: str) -> str:
         """Specifically for Anticipated..., used to convert to isoformat.
 
-        Returns isoformatted string, unmodified date arg, or '202' (used to
-        help with filtering out non-datetime values and will be returned to blank)
+        Returns isoformatted string, unmodified date arg, or '202'. '202'
+        is specifically to 'mark' empty fields to be grouped with rows with valid datetimes for
+        uploading to the non-Hold sheet. In other words, the rows that get sent to the non-Hold sheet start with '202'.
+
+        Fields that match '202' are returned to blanks after creating the non-Hold DF.
         """
         if date:
             if "/" in date:
@@ -58,13 +61,14 @@ def import_csv_df() -> pd.DataFrame:
                 return f'{year}-{month.rjust(2, "0")}-{day.rjust(2, "0")}'
             else:
                 return date
-        return "20"  # used to return back to blank after hold_df removed, as in first 2 characters of datetime
+        return "202"  # used to return back to blank after hold_df removed, as in first 2 characters of datetime
 
     df = pd.read_csv(NS_CSV_DUMP).fillna("")
     df.rename(
         columns={"Name": "Item", "Date Photo Completed": "Date Photo Completed?"},
         inplace=True,
     )
+
     check_csv_columns(df)
 
     for date_field in (
@@ -81,11 +85,24 @@ def import_csv_df() -> pd.DataFrame:
     df["Anticipated Launch Date"] = df["Anticipated Launch Date"].apply(
         lambda x: convert_date(x)
     )
-    hold_df = df[~df["Anticipated Launch Date"].str.startswith("20")]
-    df = df[df["Anticipated Launch Date"].str.startswith("20")]
-    df["Anticipated Launch Date"].replace("20", "", inplace=True)
 
-    return df[SS_COLUMNS], hold_df[SS_COLUMNS]
+    # pull out rows that do not start with a '202', ie a date
+    hold_df = df[~df["Anticipated Launch Date"].str.startswith("202")]
+
+    # filter for rows with '202' and return '202' back to blank
+    df = df[df["Anticipated Launch Date"].str.startswith("202")]
+    df["Anticipated Launch Date"].replace("202", "", inplace=True)
+
+    hold_df = hold_df[
+        [
+            "Item",
+            "Description",
+            "Photograph",
+            "Anticipated Launch Date",
+        ]
+    ]
+
+    return df[SS_COLUMNS], hold_df
 
 
 def open_smartsheets() -> smartsheet:
@@ -164,7 +181,7 @@ def main():
     new_hold_df = hold_df[~hold_df["Item"].isin(hold_active_items)].reset_index()
 
     upload_new_df(ss_client, pd_sheet, new_df)
-    upload_new_df(ss_client, hold_sheet, new_hold_df, ignore_col_err=True)
+    upload_new_df(ss_client, hold_sheet, new_hold_df)
 
 
 if __name__ == "__main__":
