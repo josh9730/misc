@@ -156,7 +156,7 @@ def upload_new_df(
         sheet.add_rows(new_row)
 
 
-def main():
+def main() -> None:
     """Uploads new items from CSV to Smartsheets.
 
     - Open Smartsheets API
@@ -179,6 +179,20 @@ def main():
     # remove rows already present on SS
     new_df = csv_df[~csv_df["Item"].isin(active_items)].reset_index()
     new_hold_df = hold_df[~hold_df["Item"].isin(hold_active_items)].reset_index()
+
+    print(f"\n* Uploading the following items to {PD_LAUNCHES_SHEET_NAME}:")
+    pd_msg = (
+        "No Items\n" if new_df["Item"].empty else new_df["Item"].to_string(index=False)
+    )
+    print(pd_msg)
+
+    print(f"\n\n* Uploading the following to {HOLDS_SHEET}:")
+    hold_msg = (
+        "No Items\n"
+        if new_hold_df["Item"].empty
+        else new_hold_df["Item"].to_string(index=False)
+    )
+    print(hold_msg)
 
     upload_new_df(ss_client, pd_sheet, new_df)
     upload_new_df(ss_client, hold_sheet, new_hold_df)
