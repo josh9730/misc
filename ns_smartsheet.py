@@ -39,7 +39,7 @@ def get_sheet_id(ss_client: smartsheet, sheet_name: str) -> int:
     raise NameError("Cannot find the specified Smartsheet")
 
 
-def import_csv_df() -> tuple[pd.DataFrame, pd.DataFrame]:
+def create_dfs_from_csv() -> tuple[pd.DataFrame, pd.DataFrame]:
     """Import and drop unneeded columns from CSV, creates appropriately formatted DFs.
 
     For Anticipated Launch Date, if any cells are not datetime, then the rows are moved to a Hold sheet.
@@ -174,7 +174,7 @@ def main():
     active_items = get_active_items(pd_sheet)
     hold_active_items = get_active_items(hold_sheet)
 
-    csv_df, hold_df = import_csv_df()
+    csv_df, hold_df = create_dfs_from_csv()
 
     # remove rows already present on SS
     new_df = csv_df[~csv_df["Item"].isin(active_items)].reset_index()
