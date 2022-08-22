@@ -2,7 +2,7 @@ import keyring
 import pandas as pd
 import smartsheet
 
-NS_CSV_DUMP = "NewPDPhotographyNeeded8-7.csv"
+NS_CSV_DUMP = "NewPDP 8-22.csv"
 PD_LAUNCHES_SHEET_NAME = "New PD Launches (NOT LIVE)"
 HOLDS_SHEET = "ROs and Holds (NOT LIVE)"
 SS_COLUMNS = [
@@ -138,7 +138,7 @@ def upload_new_df(
     for index, row in new_df.iterrows():
         new_row = ss_client.models.Row()
         for col_name in SS_COLUMNS:
-            if row[col_name]:  # can't append cells with empty values
+            if row.get(col_name):  # can't append cells with empty values
                 sheet_col = sheet.get_column_by_title(col_name)
                 if sheet_col:
                     new_row.cells.append(
