@@ -5,6 +5,10 @@ import pandas as pd
 import smartsheet
 import tomli
 
+"""To Do
+- if Description contains 'runout' then move to Holds
+"""
+
 
 class PDLaunchUpload:
     def __init__(self) -> None:

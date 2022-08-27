@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "pd_launches"
+version = "0.1.0"
+description = ""
+authors = ["smalljosh"]
+
+[tool.poetry.dependencies]
+python = "3.9.*"
+tomli = "^2.0.1"
+PySimpleGUI = "^4.60.3"
+argparse = "^1.4.0"
+keyring = "^23.8.2"
+pandas = "^1.4.3"
+smartsheet-python-sdk = "^2.177.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
