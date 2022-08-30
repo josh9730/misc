@@ -1,0 +1,42 @@
+{
+    "csv_file": "NewPDP 8-29.csv",
+    "pd_launches": {
+        "smartsheet_name": "New PD Launches",
+        "smartsheet_columns": [
+            "Anticipated Launch Date",
+            "Center Stones Available",
+            "Date Photo Completed?",
+            "Date Sent to Photography",
+            "Description",
+            "Design Approval Date",
+            "Design Approval Status",
+            "Earliest PO/WO Date",
+            "How Produced",
+            "Inventory Available",
+            "Item",
+            "Launch Notes",
+            "Photo Notes",
+            "Photograph",
+            "eCommerce Notes"
+        ]
+    },
+    "holds": {
+        "smartsheet_name": "ROs and Holds",
+        "smartsheet_columns": [
+            "Item",
+            "Description",
+            "Photograph",
+            "Anticipated Launch Date"
+        ]
+    },
+    "date_columns": [
+        "Earliest PO/WO Date",
+        "Design Approval Date",
+        "Date Photo Completed?",
+        "Date Sent to Photography"
+    ],
+    "rename_ns_columns": {
+        "Name": "Item",
+        "Date Photo Completed": "Date Photo Completed?"
+    }
+}

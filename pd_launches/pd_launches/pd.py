@@ -1,29 +1,20 @@
-import argparse
-
 import keyring
 import pandas as pd
 import smartsheet
-import tomli
-
-"""To Do
-- if Description contains 'runout' then move to Holds
-"""
 
 
 class PDLaunchUpload:
-    def __init__(self) -> None:
-        with open("pd_launches_input.toml", "rb") as f:
-            data = tomli.load(f)
+    def __init__(self, data: dict) -> None:
 
-        self.pd_launch_sheet_name = data["PD_LAUNCHES"]["smartsheet_name"]
-        self.holds_sheet_name = data["HOLDS"]["smartsheet_name"]
-        self.pd_ss_columns = data["PD_LAUNCHES"]["smartsheet_columns"]
+        self.pd_launch_sheet_name = data["pd_launches"]["smartsheet_name"]
+        self.holds_sheet_name = data["holds"]["smartsheet_name"]
+        self.pd_ss_columns = data["pd_launches"]["smartsheet_columns"]
         self.pd_ss_columns.sort()
-        self.hold_ss_columns = data["HOLDS"]["smartsheet_columns"]
+        self.hold_ss_columns = data["holds"]["smartsheet_columns"]
 
         self.csv_file = data["csv_file"]
-        self.column_rename = data["RENAME_NS_COLUMNS"]
-        self.date_columns = data["DATEFIELDS"]["columns"]
+        self.column_rename = data["rename_ns_columns"]
+        self.date_columns = data["date_columns"]
 
         self.ss_client = self._open_smartsheets()
         pd_launch_sheet_id = self._get_sheet_id(self.pd_launch_sheet_name)
@@ -87,6 +78,8 @@ class PDLaunchUpload:
                 if "/" in date:
                     # coerce to isoformat
                     month, day, year = date.split("/")
+                    if len(year) == 2:
+                        year = "20" + year
                     return f'{year}-{month.rjust(2, "0")}-{day.rjust(2, "0")}'
                 else:
                     return date
@@ -118,6 +111,10 @@ class PDLaunchUpload:
         # pull out rows that do not start with a '202', ie a date
         hold_df = pd_df[~pd_df["Anticipated Launch Date"].str.startswith("202")]
 
+        # if Description startswith 'runout' move to holds
+        runouts = pd_df[pd_df['Description'].str.match('runout.*', case=False)]
+        hold_df = pd.concat([hold_df, runouts])
+
         # filter for rows with '202' and return '202' back to blank
         pd_df = pd_df[pd_df["Anticipated Launch Date"].str.startswith("202")]
         pd_df["Anticipated Launch Date"].replace("202", "", inplace=True)
@@ -128,23 +125,15 @@ class PDLaunchUpload:
             ~hold_df["Item"].isin(self.holds_active_items)
         ].reset_index()
 
-    def print_uploads(self) -> None:
+    def return_uploads(self) -> tuple[list, list]:
         """Print the Items that will be uploaded to the PD Launches and Holds smartsheets."""
-        print(f"\n* Uploading the following items to {self.pd_launch_sheet_name}:")
-        pd_msg = (
-            "No Items\n"
-            if self.pd_df["Item"].empty
-            else self.pd_df["Item"].to_string(index=False)
-        )
-        print(pd_msg)
+        pd_items, hold_items = [], []
+        if not self.pd_df["Item"].empty:
+            pd_items = self.pd_df["Item"].tolist()
+        if not self.hold_df["Item"].empty:
+            hold_items = self.hold_df["Item"].tolist()
 
-        print(f"\n\n* Uploading the following to {self.holds_sheet_name}:")
-        hold_msg = (
-            "No Items\n"
-            if self.hold_df["Item"].empty
-            else self.hold_df["Item"].to_string(index=False)
-        )
-        print(hold_msg)
+        return pd_items, hold_items
 
     def upload_dfs(self) -> None:
         """Iterates over csv dataframe and uploads to Smartsheets.
@@ -152,6 +141,9 @@ class PDLaunchUpload:
         Adds one new Row at a time. Attemping to add a list of Rows gives error:
             'Invalid row location: You must use at least 1 location specifier'
         even though toBottom is set.
+
+        overrideValidation is set to True to allow for PickLists. Via API non-required conformity
+        seems to be required.
         """
 
         def _create_and_upload(
@@ -169,6 +161,8 @@ class PDLaunchUpload:
                                     {
                                         "column_id": sheet_col.id,
                                         "value": row[col_name],
+                                        "overrideValidation": True,
+                                        "strict": False,
                                     }
                                 )
                             else:
@@ -178,21 +172,3 @@ class PDLaunchUpload:
 
         _create_and_upload(self.pd_launch_ss, self.pd_df, self.pd_ss_columns)
         _create_and_upload(self.holds_ss, self.hold_df, self.hold_ss_columns)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run PD Launches tool.")
-    parser.add_argument(
-        "-t",
-        "--test",
-        action="store_true",
-        help="Run program in test mode, preventing upload to Smartsheet",
-    )
-    args = parser.parse_args()
-
-    pd_launches = PDLaunchUpload()
-    pd_launches.create_dfs_from_csv()
-    pd_launches.print_uploads()
-
-    if not args.test:
-        pd_launches.upload_dfs()
